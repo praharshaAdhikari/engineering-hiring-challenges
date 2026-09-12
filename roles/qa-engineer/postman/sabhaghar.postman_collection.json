@@ -1,0 +1,3867 @@
+{
+  "info": {
+    "_postman_id": "f3bbbc00-60a3-42d5-9fa1-c2976d7f31cd",
+    "name": "Sabhaghar Booking v2.3.1 — QA exploration",
+    "description": "API exploration collection for the QA screening exercise.\n\n**Order of play**\n1. `npm run reset` in `roles/qa-engineer/app`, then `npm start`.\n2. Run folder 1 (Auth) — the logins save the tokens every other request uses.\n3. Work through the rest. Read the whole response body, not the fields the UI renders.\n\nDescriptions cite the section of `app/SPEC.md` that governs each request. §7 of the spec lists behaviour that looks wrong and is deliberate — those requests are labelled, and reporting them as bugs costs marks.\n\nNothing here asserts pass/fail. It puts the payloads in front of you; the judgement is yours.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Today, in YYYY-MM-DD, for the 'is it really in the future?' probes.",
+          "pm.collectionVariables.set('todayDate', new Date().toISOString().slice(0, 10));",
+          "",
+          "// Re-encode the member token with role=staff, to see what the token is trusted for.",
+          "const t = pm.collectionVariables.get('memberToken');",
+          "if (t) {",
+          "  const [id, email] = atob(t).split(':');",
+          "  pm.collectionVariables.set('forgedToken', btoa(`${id}:${email}:staff`));",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000",
+      "type": "string"
+    },
+    {
+      "key": "staffToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "memberToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "otherToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "forgedToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "garbageToken",
+      "value": "not-a-real-token",
+      "type": "string"
+    },
+    {
+      "key": "newRef",
+      "value": "HCC-BK-4285",
+      "type": "string"
+    },
+    {
+      "key": "futureDate",
+      "value": "2027-02-01",
+      "type": "string"
+    },
+    {
+      "key": "todayDate",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1 · Auth",
+      "item": [
+        {
+          "name": "Login — staff",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"staff@himalayacc.example\",\n  \"password\": \"staff12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Saves `staffToken`. Run this first — most of the Office folder needs it."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set('staffToken', b.token);",
+                  "console.log('token payload:', atob(b.token));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login — member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"member@himalayacc.example\",\n  \"password\": \"member12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Saves `memberToken`. Note this account starts with **no** seeded bookings."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set('memberToken', b.token);",
+                  "console.log('token payload:', atob(b.token));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login — other member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"other@himalayacc.example\",\n  \"password\": \"other12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Saves `otherToken`. Use this to prove authorisation (SPEC §2)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set('otherToken', b.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login — wrong password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"member@himalayacc.example\",\n  \"password\": \"nope\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Compare the status and wording here with 'unknown email' below."
+          },
+          "response": []
+        },
+        {
+          "name": "Login — unknown email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nobody@himalayacc.example\",\n  \"password\": \"member12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login — seeded member with no password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"bj.shrestha@example.com\",\n  \"password\": \"anything\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Every seeded member exists as an account without a password (app/README.md)."
+          },
+          "response": []
+        },
+        {
+          "name": "Login — missing fields",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login — email case variant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"MEMBER@himalayacc.example\",\n  \"password\": \"member12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "The seed data holds the same person's email in two capitalisations."
+          },
+          "response": []
+        }
+      ],
+      "description": "Run 'Login — staff' and 'Login — member' once; the rest of the collection reads the saved tokens."
+    },
+    {
+      "name": "2 · Public (no sign-in)",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Spaces — catalogue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/spaces",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "spaces"
+              ]
+            },
+            "description": "Check every capacity, rate and deposit against SPEC §3."
+          },
+          "response": []
+        },
+        {
+          "name": "Space — library (with add-ons + blackouts)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/spaces/library",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "spaces",
+                "library"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Space — classroom-b (closed for renovation)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/spaces/classroom-b",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "spaces",
+                "classroom-b"
+              ]
+            },
+            "description": "SPEC §7.5 — it appearing in the catalogue is deliberate."
+          },
+          "response": []
+        },
+        {
+          "name": "Space — unknown slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/spaces/no-such-space",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "spaces",
+                "no-such-space"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Availability — courtyard, back-to-back pair",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/spaces/courtyard/availability?date=2026-11-07",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "spaces",
+                "courtyard",
+                "availability"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-11-07"
+                }
+              ]
+            },
+            "description": "HCC-BK-4279 10:00–12:00 and HCC-BK-4280 12:00–14:00. SPEC §5 says touching times are legal."
+          },
+          "response": []
+        },
+        {
+          "name": "Availability — a blackout day",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/spaces/main-hall/availability?date=2026-12-25",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "spaces",
+                "main-hall",
+                "availability"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-12-25"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Availability — day holding a cancelled booking",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/spaces/main-hall/availability?date=2026-11-07",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "spaces",
+                "main-hall",
+                "availability"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-11-07"
+                }
+              ]
+            },
+            "description": "HCC-BK-4284 15:00–18:00 is cancelled. SPEC §4: cancelled bookings must not hold a slot."
+          },
+          "response": []
+        },
+        {
+          "name": "Availability — day holding a pending booking",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/spaces/main-hall/availability?date=2026-10-06",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "spaces",
+                "main-hall",
+                "availability"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-10-06"
+                }
+              ]
+            },
+            "description": "HCC-BK-4247 11:00–12:00 is pending. SPEC §4: pending DOES hold the slot."
+          },
+          "response": []
+        },
+        {
+          "name": "Availability — no date param",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/spaces/library/availability",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "spaces",
+                "library",
+                "availability"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Availability — malformed date",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/spaces/library/availability?date=not-a-date",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "spaces",
+                "library",
+                "availability"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "not-a-date"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Calendar — full season",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/calendar?from=2026-10-01&to=2026-12-31",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "calendar"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-10-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-12-31"
+                }
+              ]
+            },
+            "description": "Read EVERY field of every event, not the ones the page renders. SPEC §4 governs what may leave the server for a private booking, and which statuses may appear at all."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "console.log('events:', b.events.length);",
+                  "console.log('statuses:', [...new Set(b.events.map(e => e.status))].join(', '));",
+                  "console.log('private events:', b.events.filter(e => e.visibility === 'private').length);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Calendar — day with a private confirmed booking",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/calendar?from=2026-10-20&to=2026-10-21",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "calendar"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-10-20"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-10-21"
+                }
+              ]
+            },
+            "description": "HCC-BK-4244 (private, confirmed) and HCC-BK-4273 (private, Devanagari name)."
+          },
+          "response": []
+        },
+        {
+          "name": "Calendar — reversed range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/calendar?from=2026-12-31&to=2026-10-01",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "calendar"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-12-31"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-10-01"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Calendar — no params",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/calendar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "calendar"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3 · Member (signed in)",
+      "item": [
+        {
+          "name": "My profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/my/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "my",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "My bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/my/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "my",
+                "bookings"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create booking — valid",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-01\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"10:00\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "201 with a reference, status `pending`, hours, total and deposit (SPEC §5). Saves the reference as `newRef`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.reference) { pm.collectionVariables.set('newRef', b.reference); }",
+                  "console.log(pm.response.code, JSON.stringify(b, null, 2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create booking — with add-ons",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-02\",\n  \"startTime\": \"10:00\",\n  \"endTime\": \"12:30\",\n  \"attendees\": 5,\n  \"purpose\": \"Workshop with kit\",\n  \"visibility\": \"public\",\n  \"addons\": [\n    {\n      \"code\": \"chairs\",\n      \"quantity\": 3\n    },\n    {\n      \"code\": \"projector\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "total = hours × rate + Σ(unit price × qty) (SPEC §5). 2.5 × 32.10 = 80.25, + 3 × 12.60 = 37.80, + 45.00 → 163.05. Check the arithmetic AND the decimal places (SPEC §3: never more than two)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.reference) { pm.collectionVariables.set('newRef', b.reference); }",
+                  "console.log(pm.response.code, JSON.stringify(b, null, 2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create booking — private visibility",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-03\",\n  \"startTime\": \"13:00\",\n  \"endTime\": \"14:00\",\n  \"attendees\": 5,\n  \"purpose\": \"Family gathering\",\n  \"visibility\": \"private\",\n  \"notes\": \"Discreet, please\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Then approve it as staff and read it back out of /api/calendar (SPEC §4)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.reference) { pm.collectionVariables.set('newRef', b.reference); }",
+                  "console.log(pm.response.code, JSON.stringify(b, null, 2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get booking — the one you just made",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/{{newRef}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "{{newRef}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get booking — ANOTHER member's booking",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/HCC-BK-4271",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "HCC-BK-4271"
+              ]
+            },
+            "description": "SPEC §2: a member must never be able to read another member's booking or personal details. Read every field of the response, including `member`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get booking — another member's, as the other account",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{otherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/HCC-BK-4279",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "HCC-BK-4279"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get booking — no token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/HCC-BK-4271",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "HCC-BK-4271"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get booking — unknown reference",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/HCC-BK-9999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "HCC-BK-9999"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel — your own booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/my/bookings/{{newRef}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "my",
+                "bookings",
+                "{{newRef}}",
+                "cancel"
+              ]
+            },
+            "description": "SPEC §6.3: status becomes `cancelled` and the deposit is released. Then re-check /api/staff/stats and the availability grid."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel — the same booking a second time",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/my/bookings/{{newRef}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "my",
+                "bookings",
+                "{{newRef}}",
+                "cancel"
+              ]
+            },
+            "description": "SPEC §6.3: a booking can only be cancelled once — 409, and no second refund row."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel — ANOTHER member's booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/my/bookings/HCC-BK-4271/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "my",
+                "bookings",
+                "HCC-BK-4271",
+                "cancel"
+              ]
+            },
+            "description": "SPEC §2/§6.3: 'on their own booking only'."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel — as a different member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{otherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/my/bookings/{{newRef}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "my",
+                "bookings",
+                "{{newRef}}",
+                "cancel"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4 · Booking validation probes (SPEC §5 and §7)",
+      "item": [
+        {
+          "name": "Past date → 422 (§5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2020-01-01\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"10:00\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §5: eventDate must be in the future."
+          },
+          "response": []
+        },
+        {
+          "name": "Today's date (§5 is worth reading closely)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"{{todayDate}}\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"10:00\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "`todayDate` is set by the collection pre-request script."
+          },
+          "response": []
+        },
+        {
+          "name": "Quarter-hour time → 422 (§7.4)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-04\",\n  \"startTime\": \"10:15\",\n  \"endTime\": \"11:15\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §7.4 — deliberate. Do NOT report this as a bug."
+          },
+          "response": []
+        },
+        {
+          "name": "Before opening → 422 (§7.7)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-05\",\n  \"startTime\": \"08:00\",\n  \"endTime\": \"09:30\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §7.7 — the building opens at 09:00. Deliberate."
+          },
+          "response": []
+        },
+        {
+          "name": "After closing → 422 (§7.7)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-06\",\n  \"startTime\": \"22:30\",\n  \"endTime\": \"23:30\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §7.7 — the building closes at 23:00. Deliberate."
+          },
+          "response": []
+        },
+        {
+          "name": "End before start → 422 (§5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-07\",\n  \"startTime\": \"14:00\",\n  \"endTime\": \"11:00\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §5."
+          },
+          "response": []
+        },
+        {
+          "name": "End equals start → 422 (§5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-08\",\n  \"startTime\": \"14:00\",\n  \"endTime\": \"14:00\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §5."
+          },
+          "response": []
+        },
+        {
+          "name": "Shortest legal booking — exactly 30 minutes (§5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-09\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"09:30\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §5 sets a 30-minute minimum, but §7.4 restricts times to :00 and :30 — so no shorter booking can be expressed through the API at all. Worth a line in your notes: the minimum-duration rule is unreachable, which means it is also untested by anything."
+          },
+          "response": []
+        },
+        {
+          "name": "Over 12 hours → 422 (§5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-10\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"22:00\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §5: maximum 12 hours. 09:00–22:00 is 13. (The seed data contains a legal 12-hour booking, HCC-BK-4282, so 12 itself is fine.)"
+          },
+          "response": []
+        },
+        {
+          "name": "Exactly 12 hours → allowed (§5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"main-hall\",\n  \"eventDate\": \"2026-12-11\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"21:00\",\n  \"attendees\": 50,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §5: at most 12 hours, so 12 is legal."
+          },
+          "response": []
+        },
+        {
+          "name": "Attendees over capacity → 422 (§5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-12\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"10:00\",\n  \"attendees\": 5000,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §5: at most the capacity of the space (library = 20). Fire regulation."
+          },
+          "response": []
+        },
+        {
+          "name": "Attendees exactly at capacity → allowed (§5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-13\",\n  \"startTime\": \"15:00\",\n  \"endTime\": \"16:00\",\n  \"attendees\": 20,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §5: library capacity is 20."
+          },
+          "response": []
+        },
+        {
+          "name": "Attendees = 0 → 422 (§5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-14\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"10:00\",\n  \"attendees\": 0,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §5: at least 1."
+          },
+          "response": []
+        },
+        {
+          "name": "Attendees = -5 → 422 (§5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-15\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"10:00\",\n  \"attendees\": -5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §5."
+          },
+          "response": []
+        },
+        {
+          "name": "Attendees as a string → ? (spec is silent)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-16\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"10:00\",\n  \"attendees\": \"twenty\",\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "The spec does not define this. 'The specification is silent on X' is a legitimate finding."
+          },
+          "response": []
+        },
+        {
+          "name": "Closed space → 409 (§5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"classroom-b\",\n  \"eventDate\": \"2026-12-17\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"10:00\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §5: a closed space is rejected with 409, not 422."
+          },
+          "response": []
+        },
+        {
+          "name": "Unknown space → 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"ballroom\",\n  \"eventDate\": \"2026-12-18\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"10:00\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Not specified — note what it does."
+          },
+          "response": []
+        },
+        {
+          "name": "Blackout date → 422 (§7.3)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-25\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"10:00\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §7.3 — deliberate. Do NOT report this as a bug. The four dates are 2026-10-11, 2026-10-20, 2026-11-11, 2026-12-25."
+          },
+          "response": []
+        },
+        {
+          "name": "Negative add-on quantity → 422 (§5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-19\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"10:00\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\",\n  \"addons\": [\n    {\n      \"code\": \"chairs\",\n      \"quantity\": -10\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §5: add-on quantities are whole numbers of at least zero."
+          },
+          "response": []
+        },
+        {
+          "name": "Fractional add-on quantity → ? ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-20\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"10:00\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\",\n  \"addons\": [\n    {\n      \"code\": \"chairs\",\n      \"quantity\": 2.5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §5 says whole numbers."
+          },
+          "response": []
+        },
+        {
+          "name": "Unknown add-on code → 422 (§5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-21\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"10:00\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\",\n  \"addons\": [\n    {\n      \"code\": \"elephant\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §5."
+          },
+          "response": []
+        },
+        {
+          "name": "Purpose containing HTML",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-22\",\n  \"startTime\": \"16:00\",\n  \"endTime\": \"17:00\",\n  \"attendees\": 5,\n  \"purpose\": \"<script>document.title='xss'</script>\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Then look at it on the member page, the office console and the public calendar. The seed data already contains one of these (HCC-BK-4274)."
+          },
+          "response": []
+        },
+        {
+          "name": "Very long purpose",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-23\",\n  \"startTime\": \"17:00\",\n  \"endTime\": \"18:00\",\n  \"attendees\": 5,\n  \"purpose\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Boundary."
+          },
+          "response": []
+        },
+        {
+          "name": "Empty body",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "What does the server do with nothing at all?"
+          },
+          "response": []
+        },
+        {
+          "name": "No token → 401 (§5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-24\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"10:00\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "SPEC §5: sign-in is required. §7.1: guests cannot book — deliberate."
+          },
+          "response": []
+        },
+        {
+          "name": "Unknown role escalation — visibility field",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-26\",\n  \"startTime\": \"18:00\",\n  \"endTime\": \"19:00\",\n  \"attendees\": 5,\n  \"purpose\": \"Reading group\",\n  \"visibility\": \"secret\",\n  \"status\": \"confirmed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Two things at once: an unrecognised visibility, and a client trying to set `status` (SPEC §7.2 says every request starts as pending)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5 · Slot conflicts (SPEC §5)",
+      "item": [
+        {
+          "name": "Overlaps an existing confirmed booking → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"courtyard\",\n  \"eventDate\": \"2026-11-07\",\n  \"startTime\": \"11:00\",\n  \"endTime\": \"13:00\",\n  \"attendees\": 20,\n  \"purpose\": \"Overlap probe\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Straddles HCC-BK-4279 (10:00–12:00) and HCC-BK-4280 (12:00–14:00). SPEC §5: 409, naming the booking it conflicts with."
+          },
+          "response": []
+        },
+        {
+          "name": "Touches the end of one → SHOULD be 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"courtyard\",\n  \"eventDate\": \"2026-11-07\",\n  \"startTime\": \"14:00\",\n  \"endTime\": \"16:00\",\n  \"attendees\": 20,\n  \"purpose\": \"Touching probe\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "HCC-BK-4280 ends at 14:00. SPEC §5: 'Times that merely touch do not conflict.' This one is worth watching carefully."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.reference) { pm.collectionVariables.set('newRef', b.reference); }",
+                  "console.log(pm.response.code, JSON.stringify(b, null, 2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Touches the start of one → SHOULD be 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"courtyard\",\n  \"eventDate\": \"2026-11-07\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"10:00\",\n  \"attendees\": 20,\n  \"purpose\": \"Touching probe 2\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "HCC-BK-4279 starts at 10:00."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.reference) { pm.collectionVariables.set('newRef', b.reference); }",
+                  "console.log(pm.response.code, JSON.stringify(b, null, 2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Swallows two existing bookings whole → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"courtyard\",\n  \"eventDate\": \"2026-11-07\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"20:00\",\n  \"attendees\": 20,\n  \"purpose\": \"Envelope probe\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Contains 10:00–12:00 and 12:00–14:00 entirely. Compare the SQL-shaped edge cases: overlap, containment, identical, touching."
+          },
+          "response": []
+        },
+        {
+          "name": "Identical to an existing booking → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"courtyard\",\n  \"eventDate\": \"2026-11-07\",\n  \"startTime\": \"10:00\",\n  \"endTime\": \"12:00\",\n  \"attendees\": 20,\n  \"purpose\": \"Identical probe\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Clashes with a PENDING request → 409 (§4)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"main-hall\",\n  \"eventDate\": \"2026-10-06\",\n  \"startTime\": \"11:00\",\n  \"endTime\": \"12:00\",\n  \"attendees\": 20,\n  \"purpose\": \"Pending-holds-the-slot probe\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "HCC-BK-4247 is pending on that slot. SPEC §4: a pending request holds the slot."
+          },
+          "response": []
+        },
+        {
+          "name": "Clashes with a CANCELLED booking → SHOULD be 201 (§4)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"main-hall\",\n  \"eventDate\": \"2026-11-07\",\n  \"startTime\": \"15:00\",\n  \"endTime\": \"18:00\",\n  \"attendees\": 20,\n  \"purpose\": \"Cancelled-frees-the-slot probe\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "HCC-BK-4284 on that slot is cancelled. SPEC §4: the room is free again."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.reference) { pm.collectionVariables.set('newRef', b.reference); }",
+                  "console.log(pm.response.code, JSON.stringify(b, null, 2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Clashes with a REJECTED booking → SHOULD be 201 (§4)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceSlug\": \"library\",\n  \"eventDate\": \"2026-12-27\",\n  \"startTime\": \"19:00\",\n  \"endTime\": \"20:00\",\n  \"attendees\": 5,\n  \"purpose\": \"Rejected-frees-the-slot probe\",\n  \"visibility\": \"public\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Reject a booking as staff first, then re-request its exact slot."
+          },
+          "response": []
+        }
+      ],
+      "description": "Postman fires sequentially, so it cannot prove the SPEC §5 race ('two members at the same moment must not both succeed'). That needs parallel requests — see SETUP.md's two-at-once.mjs."
+    },
+    {
+      "name": "6 · The office (staff only)",
+      "item": [
+        {
+          "name": "Bookings — every filter, all switched off",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "all",
+                  "disabled": true
+                },
+                {
+                  "key": "space",
+                  "value": "main-hall",
+                  "disabled": true
+                },
+                {
+                  "key": "from",
+                  "value": "2026-10-01",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "2026-12-31",
+                  "disabled": true
+                },
+                {
+                  "key": "sort",
+                  "value": "event_date",
+                  "disabled": true
+                },
+                {
+                  "key": "dir",
+                  "value": "asc",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "pageSize",
+                  "value": "25",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Tick the params you want in Postman's Params tab. SPEC §6.1 lists the supported set."
+          },
+          "response": []
+        },
+        {
+          "name": "Bookings — search by Devanagari name (§6.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?q=%E0%A4%B8%E0%A5%81%E0%A4%B7%E0%A5%8D%E0%A4%AE%E0%A4%BF%E0%A4%A4%E0%A4%BE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "सुष्मिता"
+                }
+              ]
+            },
+            "description": "q = सुष्मिता (HCC-BK-4273). SPEC §6.1: 'Search must work for a name written in Devanagari.'"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "console.log('matches:', b.total);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bookings — search by the other Devanagari name",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?q=%E0%A4%85%E0%A4%A8%E0%A4%BF%E0%A4%B6%E0%A4%BE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "अनिशा"
+                }
+              ]
+            },
+            "description": "q = अनिशा (HCC-BK-4272)."
+          },
+          "response": []
+        },
+        {
+          "name": "Bookings — search by reference",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?q=HCC-BK-4271",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "HCC-BK-4271"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bookings — search by email",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?q=bj.shrestha@example.com",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "bj.shrestha@example.com"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bookings — search by name with a comma and quotes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?q=Shrestha%2C%20Bijay",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "Shrestha, Bijay"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bookings — SQL-ish input in q",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?q=%27%20OR%201%3D1%20--",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "' OR 1=1 --"
+                }
+              ]
+            },
+            "description": "q = ' OR 1=1 --"
+          },
+          "response": []
+        },
+        {
+          "name": "Bookings — status=pending",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?status=pending&pageSize=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "Seeded counts (app/README.md): 37 confirmed · 22 completed · 8 pending · 11 cancelled · 6 rejected."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('total:', pm.response.json().total);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bookings — status=all",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?status=all&pageSize=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "all"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "100"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('total:', pm.response.json().total);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bookings — status=nonsense",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?status=banana",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "banana"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bookings — pageSize=0 → 422 (§6.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?pageSize=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "SPEC §6.1: pageSize is 1 to 100; values outside are rejected with 422, and the response must never be an error page or an unbounded dump."
+          },
+          "response": []
+        },
+        {
+          "name": "Bookings — pageSize=101 → 422 (§6.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?pageSize=101",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "101"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bookings — pageSize=100 → allowed (§6.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?pageSize=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "100"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "console.log('asked 100, got', b.bookings.length, 'of', b.total);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bookings — pageSize=99999 → 422 (§6.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?pageSize=99999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "99999"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bookings — pageSize=-1 → 422 (§6.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?pageSize=-1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "-1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bookings — pageSize=abc → 422 (§6.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?pageSize=abc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "abc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bookings — page=0 → 422 (§6.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?page=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bookings — page=-3 → 422 (§6.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?page=-3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "-3"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bookings — page beyond the end",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?page=500&pageSize=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "500"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bookings — sort=attendees desc",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?sort=attendees&dir=desc&pageSize=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "attendees"
+                },
+                {
+                  "key": "dir",
+                  "value": "desc"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bookings — sort injection",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?sort=event_date%3B%20DROP%20TABLE%20bookings&dir=asc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "event_date; DROP TABLE bookings"
+                },
+                {
+                  "key": "dir",
+                  "value": "asc"
+                }
+              ]
+            },
+            "description": "sort = 'event_date; DROP TABLE bookings'. Check /api/health afterwards."
+          },
+          "response": []
+        },
+        {
+          "name": "Bookings — date range filter",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?from=2026-11-01&to=2026-11-30&pageSize=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-11-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-11-30"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "100"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Stats (§6.4)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "stats"
+              ]
+            },
+            "description": "SPEC §6.4: hours and fees count `confirmed` and `completed` ONLY; deposits held counts deposit status `held`. app/README.md says the seeded truth is 200.5 hours, $21,312.90 in hire fees and $16,400.00 in deposits. Work them out of src/seed/bookings.csv yourself."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "console.log('hoursBooked', b.hoursBooked, '(README says 200.5)');",
+                  "console.log('hireFees', b.hireFees, '(README says 21312.90)');",
+                  "console.log('depositsHeld', b.depositsHeld, '(README says 16400)');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CSV export (§6.5)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings.csv?status=all&pageSize=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings.csv"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "all"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "SPEC §6.5: RFC 4180 quoting, and UTF-8 with a byte-order mark. Save the body and open it in a spreadsheet. Look for `Shrestha, Bijay \"BJ\"` (HCC-BK-4271) and the Devanagari names."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const t = pm.response.text();",
+                  "console.log('starts with BOM:', t.charCodeAt(0) === 0xFEFF);",
+                  "console.log('rows:', t.split('\\n').length - 1);",
+                  "console.log(t.split('\\n').filter(r => r.includes('Shrestha')).join('\\n'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CSV export — filtered",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings.csv?status=pending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings.csv"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            },
+            "description": "SPEC §6.5: 'exports the current filter'. Does the row count match the JSON endpoint?"
+          },
+          "response": []
+        },
+        {
+          "name": "Audit log (§6.2)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/audit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "audit"
+              ]
+            },
+            "description": "SPEC §6.2: approve and reject both write an audit row NAMING the staff member who did it."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve a pending request (§6.2)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings/HCC-BK-4247/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings",
+                "HCC-BK-4247",
+                "approve"
+              ]
+            },
+            "description": "SPEC §6.2: status becomes `confirmed`, and the slot is RE-CHECKED at this moment — if something took the time since, approval must fail with 409 rather than double-book. To test that: request the same slot as a member first, get it approved, then approve this one."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve the same request twice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings/HCC-BK-4247/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings",
+                "HCC-BK-4247",
+                "approve"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reject a pending request (§6.2)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings/HCC-BK-4249/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings",
+                "HCC-BK-4249",
+                "reject"
+              ]
+            },
+            "description": "SPEC §6.2: status becomes `rejected` AND deposit.status becomes `refunded`. Check the booking and then /api/staff/stats."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve an already-cancelled booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings/HCC-BK-4201/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings",
+                "HCC-BK-4201",
+                "approve"
+              ]
+            },
+            "description": "HCC-BK-4201 is cancelled in the seed data."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve an unknown reference",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings/HCC-BK-9999/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings",
+                "HCC-BK-9999",
+                "approve"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7 · Authorisation (SPEC §2)",
+      "item": [
+        {
+          "name": "Staff bookings with a MEMBER token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ]
+            },
+            "description": "SPEC §2: 'Staff routes are reachable only by a staff account.'"
+          },
+          "response": []
+        },
+        {
+          "name": "Staff stats with a MEMBER token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "stats"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Staff CSV with a MEMBER token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings.csv",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings.csv"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Staff audit with a MEMBER token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/audit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "audit"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Approve with a MEMBER token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings/HCC-BK-4224/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings",
+                "HCC-BK-4224",
+                "approve"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Staff bookings with no token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Staff bookings with a token in the QUERY STRING",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?token={{staffToken}}&pageSize=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "The route accepts `?token=`. Think about where query strings end up: browser history, server logs, proxy logs, the Referer header."
+          },
+          "response": []
+        },
+        {
+          "name": "Staff bookings with the MEMBER token in the query string",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?token={{memberToken}}&pageSize=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{memberToken}}"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Garbage bearer token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{garbageToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/my/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "my",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Hand-made token (see what the real one decodes to)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{forgedToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/my/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "my",
+                "profile"
+              ]
+            },
+            "description": "Run 'Login — member' and read the console: the token is base64 of `id:email:role`. The collection pre-request script builds `forgedToken` by re-encoding the member's own id with the role changed to `staff`. Try it against /api/staff/bookings too."
+          },
+          "response": []
+        },
+        {
+          "name": "Hand-made token against a staff route",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{forgedToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/staff/bookings?pageSize=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "staff",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "My profile with the OTHER member's token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{otherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/my/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "my",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
