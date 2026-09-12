@@ -1,0 +1,10 @@
+
+Fired 10 simultaneous requests for library on 2027-05-20 10:00-12:00
+
+  201 Created : 10
+  409 Conflict: 0
+
+  references created: HCC-BK-4285, HCC-BK-4286, HCC-BK-4287, HCC-BK-4288, HCC-BK-4289, HCC-BK-4290, HCC-BK-4291, HCC-BK-4292, HCC-BK-4293, HCC-BK-4294
+
+❌ 10 requests succeeded for the same slot. SPEC §5 requires exactly one. The office has double-booked the room.
+

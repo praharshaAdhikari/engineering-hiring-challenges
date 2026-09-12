@@ -1,0 +1,25 @@
+{
+    "reference": "HCC-BK-4271",
+    "space": {
+        "slug": "library",
+        "name": "Reading Room"
+    },
+    "date": "2026-10-19",
+    "start": "10:00",
+    "end": "12:00",
+    "attendees": 20,
+    "purpose": "Board meeting, quarterly",
+    "notes": null,
+    "visibility": "public",
+    "status": "confirmed",
+    "deposit": {
+        "amount": 50,
+        "status": "held"
+    },
+    "member": {
+        "name": "Shrestha, Bijay \"BJ\"",
+        "email": "bj.shrestha@example.com",
+        "phone": "+977 9801 234567",
+        "address": "9 Harwood Rd, Euless, TX 76040"
+    }
+}
