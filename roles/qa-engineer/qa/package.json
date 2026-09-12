@@ -1,0 +1,19 @@
+{
+  "name": "sabhaghar-qa",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "QA suite for Sabhaghar Booking v2.3.1",
+  "scripts": {
+    "test": "playwright test",
+    "test:red": "PROVE_BUGS=1 playwright test",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "probe:concurrency": "node probes/two-at-once.mjs",
+    "app:reset": "DB_PATH=${DB_PATH:-/tmp/sabhaghar-qa.sqlite} node ../app/src/reset.js",
+    "app:start": "DB_PATH=${DB_PATH:-/tmp/sabhaghar-qa.sqlite} node ../app/src/server.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  }
+}

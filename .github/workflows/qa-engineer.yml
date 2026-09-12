@@ -1,0 +1,36 @@
+name: QA — Sabhaghar Booking
+
+on:
+  push:
+    paths:
+      - 'roles/qa-engineer/**'
+  pull_request:
+    paths:
+      - 'roles/qa-engineer/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: roles/qa-engineer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install the app under test
+        run: cd app && npm ci
+      - name: Install the QA suite
+        run: cd qa && npm ci
+      - name: Install Playwright browser
+        run: cd qa && npx playwright install --with-deps chromium
+      - name: Run the suite
+        # Playwright resets and starts the app itself (see playwright.config.ts webServer).
+        run: cd qa && npm test
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: roles/qa-engineer/qa/playwright-report
+          retention-days: 7
