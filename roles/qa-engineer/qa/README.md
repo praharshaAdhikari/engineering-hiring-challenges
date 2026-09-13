@@ -73,16 +73,22 @@ Playwright's `test.fail()`:
 The UI flow is a normal passing test in both modes; it exists to prove the environment works,
 so the red tests read as "this behaviour is broken", not "the harness is misconfigured".
 
-## The concurrency probe
+## Probes
 
-`probes/two-at-once.mjs` is the dependency-free script the finding started from. It fires ten
-simultaneous booking requests for one slot and prints how many the server accepted — ten, on
-the app as shipped. Run it against a fresh reset:
+Two dependency-free scripts in `probes/`, for the findings that are clearest as a script:
+
+- **`probe:concurrency`** (`two-at-once.mjs`) — fires ten simultaneous booking requests for
+  one slot and prints how many the server accepted (ten, on the app as shipped). Same
+  experiment as the `one-slot-one-winner` test, but quicker to run live and the more dramatic
+  thing to film. Needs a running app.
+- **`probe:stats`** (`stats-from-seed.mjs`) — derives the correct office figures (200.5 hours,
+  $21,312.90) straight from `app/src/seed/bookings.csv`, hard-coding the SPEC §3 rates and
+  doing its own arithmetic so it imports nothing from the app and cannot reproduce its bug. If
+  the app is running it prints the app's figures beside the derived ones and flags the
+  mismatch — the evidence for BUG-005, which is not one of the five automated tests.
 
 ```bash
 npm run app:reset && npm run app:start   # one terminal (uses the tmpfs DB)
 npm run probe:concurrency                # another (from qa/)
+npm run probe:stats                      # derives the figures; compares if the app is up
 ```
-
-The Playwright test `one-slot-one-winner` is the same experiment as an assertion; the probe
-is the quicker thing to run live and the more dramatic thing to film.

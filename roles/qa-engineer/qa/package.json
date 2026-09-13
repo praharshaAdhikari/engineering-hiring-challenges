@@ -11,7 +11,8 @@
     "report": "playwright show-report",
     "probe:concurrency": "node probes/two-at-once.mjs",
     "app:reset": "DB_PATH=${DB_PATH:-/tmp/sabhaghar-qa.sqlite} node ../app/src/reset.js",
-    "app:start": "DB_PATH=${DB_PATH:-/tmp/sabhaghar-qa.sqlite} node ../app/src/server.js"
+    "app:start": "DB_PATH=${DB_PATH:-/tmp/sabhaghar-qa.sqlite} node ../app/src/server.js",
+    "probe:stats": "node probes/stats-from-seed.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0"

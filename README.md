@@ -7,31 +7,31 @@ defects that matter, wrote them up so a developer can fix them without asking me
 and left behind an automated suite that fails while the bugs are present and turns green once
 they are fixed.
 
-**Video walkthrough:** _<add your Loom / YouTube (unlisted) link here — 2–3 min>_
+**Video walkthrough:** [Loom Walkthrough](https://www.loom.com/share/dda3a26658244daca7077ec0b8067897)
 
 All of my work is under [`roles/qa-engineer/`](roles/qa-engineer/). Nothing in the app under
 test (`roles/qa-engineer/app/`) was modified.
 
 ## Where everything is
 
-| Deliverable | Location |
-|---|---|
-| Test summary + **NO-GO** recommendation | [`roles/qa-engineer/TEST-SUMMARY.md`](roles/qa-engineer/TEST-SUMMARY.md) |
-| Five bug reports, ranked worst-first | [`roles/qa-engineer/bug-reports/`](roles/qa-engineer/bug-reports/) |
-| Automated suite (3 API, 1 concurrency, 1 UI) | [`roles/qa-engineer/qa/`](roles/qa-engineer/qa/) |
-| Concurrency probe | [`roles/qa-engineer/qa/probes/two-at-once.mjs`](roles/qa-engineer/qa/probes/two-at-once.mjs) |
-| Postman collection (API exploration) | [`roles/qa-engineer/postman/`](roles/qa-engineer/postman/) |
-| CI workflow | [`.github/workflows/qa-engineer.yml`](.github/workflows/qa-engineer.yml) |
-| AI usage | [`AI-USAGE.md`](AI-USAGE.md) |
+| Deliverable                                  | Location                                                                 |
+| -------------------------------------------- | ------------------------------------------------------------------------ |
+| Test summary + **NO-GO** recommendation      | [`roles/qa-engineer/TEST-SUMMARY.md`](roles/qa-engineer/TEST-SUMMARY.md) |
+| Five bug reports, ranked worst-first         | [`roles/qa-engineer/bug-reports/`](roles/qa-engineer/bug-reports/)       |
+| Automated suite (3 API, 1 concurrency, 1 UI) | [`roles/qa-engineer/qa/`](roles/qa-engineer/qa/)                         |
+| Probes (concurrency, stats-from-seed)        | [`roles/qa-engineer/qa/probes/`](roles/qa-engineer/qa/probes/)           |
+| Postman collection (API exploration)         | [`roles/qa-engineer/postman/`](roles/qa-engineer/postman/)               |
+| CI workflow                                  | [`.github/workflows/qa-engineer.yml`](.github/workflows/qa-engineer.yml) |
+| AI usage                                     | [`AI-USAGE.md`](AI-USAGE.md)                                             |
 
 ## Stack and why
 
-| Layer | Choice | Why |
-|---|---|---|
-| Test framework | Playwright + TypeScript | One tool for API, concurrency and UI; the `request` fixture does the API tests with no browser, and I read TS fastest |
-| Concurrency probe | Plain Node 24 (`fetch`, `Promise.all`) | No dependencies; the §5 race reads most clearly as a tiny standalone script |
-| CI | GitHub Actions | Node 24 and nothing else — `node:sqlite` means no database service to stand up |
-| API exploration | Postman collection | The defects live in the payloads, and a saved collection makes the inspection reproducible |
+| Layer             | Choice                                 | Why                                                                                                                   |
+| ----------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Test framework    | Playwright + TypeScript                | One tool for API, concurrency and UI; the `request` fixture does the API tests with no browser, and I read TS fastest |
+| Concurrency probe | Plain Node 24 (`fetch`, `Promise.all`) | No dependencies; the §5 race reads most clearly as a tiny standalone script                                           |
+| CI                | GitHub Actions                         | Node 24 and nothing else — `node:sqlite` means no database service to stand up                                        |
+| API exploration   | Postman collection                     | The defects live in the payloads, and a saved collection makes the inspection reproducible                            |
 
 ## How to run the suite
 
@@ -51,7 +51,7 @@ To watch the same suite fail against the shipped app — the run in the video:
 npm run test:red        # 4 failed (the bugs), 1 passed (the UI happy path)
 ```
 
-Both are correct. The four bug tests assert the *fixed* behaviour and are marked as expected
+Both are correct. The four bug tests assert the _fixed_ behaviour and are marked as expected
 failures, so CI stays green as a live regression guard and turns red the moment a bug is
 fixed (or a regression appears). The full explanation is in
 [`roles/qa-engineer/qa/README.md`](roles/qa-engineer/qa/README.md).
@@ -89,7 +89,7 @@ deposits held. BUG-005 is that the app reports different numbers.
 ## Decisions and trade-offs
 
 - **Did less, well.** Five bug reports and five tests, the shape the SCREEN brief asks for —
-  not twenty-five thin ones. I found more than five defects and *chose* which five to write
+  not twenty-five thin ones. I found more than five defects and _chose_ which five to write
   up; twelve more are logged in TEST-SUMMARY for the developer.
 - **The suite is green in CI but genuinely red at heart.** Using Playwright's `test.fail()`
   keeps CI green (so the team keeps the workflow) while making the suite a real regression

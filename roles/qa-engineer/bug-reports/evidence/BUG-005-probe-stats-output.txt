@@ -1,0 +1,17 @@
+
+Derived from 84 seed rows (SPEC §6.4, confirmed + completed only):
+
+  hours booked  : 200.5
+  hire fees     : $21,312.90
+  deposits held : $16,400.00
+
+  (app/README.md publishes 200.5 / $21,312.90 / $16,400.00 as the source of truth.)
+
+App reports (GET /api/staff/stats):
+
+  hoursBooked   : 270.5        WRONG — expected 200.5
+  hireFees      : 26175.35     WRONG — expected 21312.9
+  depositsHeld  : 16400        matches
+
+❌ The app disagrees with the seed — BUG-005 (stats count every status, not just confirmed/completed).
+

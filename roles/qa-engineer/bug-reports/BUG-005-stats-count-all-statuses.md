@@ -32,9 +32,12 @@ $21,312.90. These are the numbers the office reports to its board.
 curl -s localhost:4000/api/staff/stats -H "authorization: Bearer <staff-token>"
 ```
 
-3. Cross-check against the seed by hand. From `src/seed/bookings.csv`, summing only
-   `confirmed` + `completed` rows (rate × hours per `SPEC.md` §6.4) gives **200.5 hours** and
-   **$21,312.90** — the figures `app/README.md` publishes as the source of truth.
+3. Cross-check against the seed. Running `npm run probe:stats` (from `qa/`) derives the
+   correct figures straight from `src/seed/bookings.csv` — **200.5 hours** and **$21,312.90**
+   for `confirmed` + `completed` (rate × hours per `SPEC.md` §6.4) — and, if the app is up,
+   prints them next to what it reports. The probe hard-codes the §3 rates and does its own
+   arithmetic; it imports nothing from the app, so it cannot reproduce the app's bug. (You can
+   confirm the same total by hand from the CSV; the script just makes it reproducible.)
 
 ## Expected result
 
@@ -71,6 +74,9 @@ numbers it reports" — one of the failures the brief names explicitly.
 ## Evidence
 
 - `evidence/BUG-005-stats-wrong-totals.json` — the `200 OK` stats on a fresh reset
+- `evidence/BUG-005-probe-stats-output.txt` — `npm run probe:stats`, deriving the correct
+  figures from the CSV independently and flagging the mismatch (270.5 vs 200.5, $26,175.35
+  vs $21,312.90; deposits held matches, so only the hours/fees query is wrong)
 
 ## Regression test
 
